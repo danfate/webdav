@@ -28,23 +28,21 @@ type User struct {
 
 // Allowed checks if the user has permission to access a directory/file
 func (u User) Allowed(url string, noModification bool) bool {
-	var rule *Rule
-	i := len(u.Rules) - 1
-
-	for i >= 0 {
-		rule = u.Rules[i]
-
-		isAllowed := rule.Allow && (noModification || rule.Modify)
+	isAllowed := false
+	for _, rule := range u.Rules[1:len(u.Rules)] {
 		if rule.Regex {
 			if rule.Regexp.MatchString(url) {
-				return isAllowed
+				isAllowed = rule.Allow && (noModification || rule.Modify)
 			}
+		} else if rule.Path == url {
+			return rule.Allow && (noModification || rule.Modify)
+		} else if strings.HasPrefix(rule.Path, url) {
+			return true
 		} else if strings.HasPrefix(url, rule.Path) {
-			return isAllowed
+			isAllowed = rule.Allow && (noModification || rule.Modify)
 		}
-
-		i--
 	}
 
-	return noModification || u.Modify
+	return isAllowed
+
 }
